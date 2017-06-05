@@ -1,0 +1,6 @@
+
+安装单独机器的spark：
+http://blog.csdn.net/github_33934628/article/details/70189141
+
+使用ipython运行spark：
+http://blog.csdn.net/xuezhisdc/article/details/52080125

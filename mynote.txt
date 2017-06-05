@@ -1,0 +1,85 @@
+sudo apt-get update
+
+sudo apt-get install git
+
+ssh-keygen -t rsa -b 4096 -C "tangent7up@163.com"
+/home/youmi/.ssh/id_rsa.pub
+
+git remote add origin git@github.com:tangent7up/tangent_code.git
+git push -u origin master
+git push origin master
+
+
+git add <filename>
+gir rm
+git commit -m "OK"
+
+git reset --hard HEAD^
+git reset --hard HEAD
+git reset --hard HEAD^^
+git reset --hard HEAD~100
+git reset --hard 3628164
+git reflog	#looking for history id
+
+
+git checkout -- readme.txt	#丢弃工作区的修改
+git chechout --test.txt		#删除错文件，恢复
+
+建立一个新的repo，并推送给github：
+mkdir tangent_code; cd tangent_code; git init
+git add <filename>; git commit -m "OK"
+git remote add origin git@github.com:tangent7up/tangent_code.git
+git push -u origin master
+
+如何本地建一个新的repo，并完成提交：
+mkdir tangent_code; cd tangent_code; git init; git pull git@github.com:tangent7up/tangent_code.git
+git add <filename>; git commit -m "OK"
+git remote add origin git@github.com:tangent7up/tangent_code.git
+git push origin master
+
+
+每次开始工作：
+git pull git@github.com:tangent7up/tangent_code.git
+git add <filename>; git commit -m "OK"
+git push git push origin master
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+共享地址
+
+smb://172.16.7.109
+
+
+
