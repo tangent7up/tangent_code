@@ -7,27 +7,59 @@ Created on Tue Jun  6 11:26:41 2017
 """
 from pyspark.sql import SparkSession
 from pyspark.sql import Row
+from pyspark import SparkContext
+from pyspark.mllib.regression import LabeledPoint, LinearRegressionWithSGD, LinearRegressionModel
 
-full_columns=["cid","age","sex","hobby"]
 spark = SparkSession \
     .builder \
     .appName("Python Spark SQL basic example") \
     .config("spark.some.config.option", "some-value") \
     .getOrCreate()
-
 sc = spark.sparkContext
 
 
-Custum = Row(*full_columns)
-lines = sc.textFile("data/20170101/summary_20170101")
-parts = lines.map(lambda l: l.split(","))
-rows = parts.map(lambda p: Custum(*p)).filter(lambda p: p["cid"]!="" and p["cid"] is not None and p["cid"]!="cid")
-lines = sc.textFile("data/20170101/summary_20170101_2")
-parts = lines.map(lambda l: l.split(","))
-rows2 = parts.map(lambda p: Custum(*p)).filter(lambda p: p["cid"]!="" and p["cid"] is not None and p["cid"]!="cid")
-rows=rows.union(rows2)
-print(rows.collect())
-print(type(rows))
-#df.rdd.map(lambda x: x)
+def parsePoint(line):
+    values = [float(x) for x in line.replace(',', ' ').split(' ')]
+    return LabeledPoint(values[0], values[1:])
+
+data = sc.textFile("lpsa.data")
+parsedData = data.map(parsePoint)
+
+model = LinearRegressionWithSGD.train(parsedData, iterations=100, step=0.00000001)
+valuesAndPreds = parsedData.map(lambda p: (p.label, model.predict(p.features)))
+
+MSE = valuesAndPreds \
+          .map(lambda tup: (tup[0] - tup[1]) ** 2) \
+          .reduce(lambda x, y: x + y) / valuesAndPreds.count()
+print("Mean Squared Error = " + str(MSE))
+
 
 spark.stop()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

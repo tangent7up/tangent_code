@@ -4,3 +4,6 @@ http://blog.csdn.net/github_33934628/article/details/70189141
 
 使用ipython运行spark：
 http://blog.csdn.net/xuezhisdc/article/details/52080125
+
+使用pycharm运行pyspark
+http://www.tuicool.com/articles/iAbInuj
