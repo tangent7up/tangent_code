@@ -7,14 +7,18 @@ Created on Tue Jun  6 09:00:56 2017
 """
 import os
 import datetime
+from pyspark.sql import Row
 
-def search(path, word):
+def search(path, word=None):
     files=[]
     for filename in os.listdir(path):
         fp = os.path.join(path, filename)
         if os.path.isfile(fp):
-            if word in filename:
-                files.append(fp)
+            if not filename.startswith("."):
+                if word is None:
+                    files.append(fp)
+                elif filename.startswith(word):
+                    files.append(fp)
         elif os.path.isdir(fp):
             search(fp, word)
     return files
@@ -50,6 +54,5 @@ def split(string,sign):
         return[]
     else:
         return string.split(sign)
-
 
 
