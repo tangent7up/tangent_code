@@ -23,7 +23,7 @@ def toSparse(l):
 
 def split(string,sign):
     if string is None:
-        return[]
+        return []
     else:
         return string.split(sign)
 
@@ -66,12 +66,29 @@ def spark_read(path,schema=None,header=False):
         df=df.union(df_add)
     return df
 
+def parse_feature_data1(onerow):
+    result=[]
+    for eachcol in full_columns:
+        if eachcol in catagory:
+            value=onerow[eachcol]
+            if value != None:
+                result.append(eachcol + '_:_' + value)
+            else:
+                result.append(eachcol + '_:__null_')
+    return result
 
+def parse_feature_data2(onerow):
+    result=[]
+    for eachcol in full_columns:
+        if eachcol in quality:
+            value=split(onerow[eachcol])
+            if value != []:
+                for v in value:
+                    result.append(eachcol + '_:_' + v)
+    return result
 
-def main():
-    if len(sys.argv)<2:
-        print ('Usage: spark-submit ctr_spark.py conf_file')
-        return
+if __name__ == "__main__":
+    assert(len(sys.argv)==2)
 
     spark = SparkSession\
         .builder\
@@ -86,7 +103,7 @@ def main():
     # conf = sc.textFile("./conf.txt").filter(lambda x: not x.startswith("#")).filter(lambda x: "=" in x).map(lambda x: x.split("=")).collect()
     for c in conf:
         if "path" in c[0]:
-            exec(c[0].strip() + "=['" + ",".join(c[1].strip().split("','")) + "']")
+            exec(c[0].strip() + "=['" + "','".join(map(lambda x: x.strip(),c[1].split(","))) + "']")
         else:
             exec(c[0].strip() + "='" + c[1].strip() + "'")
     schema_str = schema
@@ -96,7 +113,7 @@ def main():
     if header=="yes":
         df_feature_train = spark_read(train_featuredata_path, header=True)
         df_click_train = spark_read(train_clickdata_path)
-        full_columns=df_feature_train.rdd.first()[0].split(",")
+        full_columns=df_feature_train.columns
     else:
         full_columns=schema_str.split(",")
         schema = StructType()
@@ -131,10 +148,6 @@ def main():
     target = ["target"]
 
 
-    new_columns=[key]
-    columns_dict={}
-    columns_dict_len={}
-
     tran_cus=set(df_click_train.rdd.map(lambda r: r["_c0"]).collect())
     tran_cus_b = sc.broadcast(tran_cus)
     schema=df_feature_train.schema
@@ -148,45 +161,49 @@ def main():
         df_test = spark.createDataFrame(df_feature_test_, schema=new_schema)
 
 
-
     #确定需要做Onehot操作的维度
     print("确定需要做Onehot操作的维度")
+    new_columns=[key]
+    columns_dict = {}
+    distinct_words1=df_train.select(catagory).rdd.flatMap(parse_feature_data1).distinct().collect()
+    distinct_words2=df_train.select(quality).rdd.flatMap(parse_feature_data2).distinct().collect()
     for column in catagory+quality:
         columns_dict[column]=[]
     for column in catagory:
-        columns_dict[column] += [list(x)[0] for x in df_train.select(column).distinct().collect()]
+        columns_dict[column] += [word.split("_:_")[1] for word in distinct_words1 if word.split("_:_")[0]==column]
     for column in quality:
-        columns_dict[column] += [val for sublist in [split(list(x)[0], "|") for x in df_train.select(column).distinct().collect()] for val in sublist]
+        columns_dict[column] += [word.split("_:_")[1] for word in distinct_words2 if word.split("_:_")[0]==column]
+
 
 
 
     #生成onehot后新的列--------------
     print("生成onehot后新的列")
-
+    columns_dict_len={}
     for column in catagory:
         unique=[i for i in list(set(columns_dict[column])) if i !=""]
         columns_dict[column]=dict(zip(unique,range(1,1+len(unique))))
         columns_dict_len[column]=len(unique)
         columns_dict[column][""]=0
-        new_columns+=[column+"_"+str(c) for c in unique]
+        new_columns+=[column+"&&"+str(c) for c in unique]
     for column in quality:
         unique=[i for i in list(set(columns_dict[column])) if i!=""]
         columns_dict[column]=dict(zip(unique,range(len(unique))))
         columns_dict_len[column]=len(unique)
-        new_columns+=[column+"_"+str(c) for c in unique]
+        new_columns+=[column+"&&"+str(c) for c in unique]
 
 
     # Logistic Regression
     print("Logistic Regression")
     parsedData = df_train.rdd.map(rowTransform).toDF()
-    lr = LogisticRegression(maxIter=100, regParam=0.0, elasticNetParam=0.0)
+    lr = LogisticRegression(maxIter=10, regParam=0.0, elasticNetParam=0.0)
     lrModel = lr.fit(parsedData)
     if mode != "train_test":
         trainingSummary = lrModel.summary
         print("areaUnderROC: " + str(trainingSummary.areaUnderROC))
         summary = lrModel.transform(parsedData)
-        logloss=summary.select("probability","label").rdd.map(lambda r: math.log(r["probability"][1])*r["label"]+
-            math.log(r["probability"][0])*(1-r["label"])).sum()/(-summary.rdd.count())
+        logloss=summary.select("probability","label").rdd.map(lambda r: math.log(r["probability"][1]+0.00000001)*r["label"]+
+            math.log(r["probability"][0]+0.00000001)*(1-r["label"])).sum()/(-summary.rdd.count())
         print("logloss: "+ str(logloss))
     else:
         parsedData_test = df_test.rdd.map(rowTransform).toDF()
@@ -194,13 +211,13 @@ def main():
         summary = lrModel.transform(parsedData_test)
         print("areaUnderROC: " + str(trainingSummary.areaUnderROC))
         logloss = summary.select("probability", "label").rdd.map(
-            lambda r: math.log(r["probability"][1]) * r["label"] +
-                      math.log(r["probability"][0]) * (1 - r["label"])).sum() / (-summary.rdd.count())
+            lambda r: math.log(r["probability"][1]+0.00000001) * r["label"] +
+                      math.log(r["probability"][0]+0.00000001) * (1 - r["label"])).sum() / (-summary.rdd.count())
         print("logloss: " + str(logloss))
 
 
     #生成json
-
+    print("生成json")
     json_data={"evaluation_metrics":{"auc":str(trainingSummary.areaUnderROC),"logloss":logloss}}
     json_data["parameters"]={}
     coef=lrModel.coefficients
@@ -214,5 +231,3 @@ def main():
 
     spark.stop()
 
-if __name__ == "__main__":
-    main()
