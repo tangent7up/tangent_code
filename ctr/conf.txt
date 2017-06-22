@@ -1,0 +1,11 @@
+#mode=train_only
+mode=train_test
+train_featuredata_path=/home/ymserver/tangent/feature
+train_clickdata_path=/home/ymserver/tangent/click
+test_featuredata_path=/home/ymserver/tangent/feature2
+test_clickdata_path=/home/ymserver/tangent/click2
+key = cid
+header=yes
+schema=cid,adx,ssp,sid,hod,dow,pub_cat1,pub_cat2,s_bundle,yob,gender,conn_type,make,model,os,osv,country,third_ad_partner,ad_cat1,ad_cat2,ad_bundle,marketing_sdk
+output=.
+special=ad_cat1,ad_cat2
