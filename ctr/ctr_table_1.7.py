@@ -51,7 +51,7 @@ def readClickFiles(clickdirs,header=None):
                 clicks.update(click_add)
                 clicks.update(click_dict)
             except Exception as e:
-                error.add(e)
+                print(e)
     return clicks
 
 def loadLevelDB(db):
@@ -131,7 +131,6 @@ def moreTrain(filepaths):
         for line in read.readlines():
             try:
                 line=line.strip().split(",")
-                hehe ##
                 if count%100000==0:
                     print("training: "+ str(count)+" lines finished")
                 count+=1
@@ -145,7 +144,7 @@ def moreTrain(filepaths):
                                 old_value = info_dict_add.get(cf+"&&"+af+"&&"+cv+"&&"+av, [0, 0])
                                 info_dict_add[cf+"&&"+af+"&&"+cv+"&&"+av]=[old_value[0]+clicks.get(line[head.index(key)],0),old_value[1]+clicks.get(line[head.index(key)],1)]
             except Exception as e:
-                error.add(e)
+                print(e)
         read.close()
     return info_dict_add
 
@@ -156,13 +155,15 @@ def moreTrain(filepaths):
 if __name__ == '__main__':
     import multiprocessing
     import json
-    error=set()
     custom_f="adx,ssp,sid,hod,dow,pub_cat1,pub_cat2,s_bundle,yob,gender,conn_type,make,model,os,osv".split(",")
     advert_f="ad_cat1,ad_cat2,ad_bundle,marketing_sdk".split(",")
     mode, train_featuredata_path, train_clickdata_path, test_featuredata_path, test_clickdata_path, key, header, schema_str, output=getConf()
     try:
         os.mkdir(output)
     except Exception as e:
+        info_dict={}
+
+    #error_log = []
         pass
     clicks = readClickFiles(train_clickdata_path)
     #db = leveldb.LevelDB(os.path.join(output,"query_database"))
@@ -213,7 +214,6 @@ if __name__ == '__main__':
     fp=open(os.path.join(output,'json.txt'),'w')
     info_json=json.dump(new_info_dict,fp)
     fp.close()
-
 
     # if mode.lower().strip() == "train_test":
     #     test(test_featuredata_path,test_clickdata_path)
